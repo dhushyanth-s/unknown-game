@@ -16,6 +16,36 @@ pub struct MyWorldCoords(Vec2);
 #[derive(Component)]
 pub struct Player;
 
+pub struct PlayerPlugin;
+
+impl Plugin for PlayerPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<MyWorldCoords>()
+            .add_systems(Startup, setup)
+            .add_systems(FixedUpdate, (Player::player_move, update_camera))
+            .add_systems(Update, (Player::player_rotate));
+    }
+}
+
+fn setup(mut commands: Commands) {
+    commands.spawn(Player::new());
+}
+
+
+fn update_camera(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    (mut cam_query, player_query): (
+        Query<&mut Transform, (With<Camera>, Without<Player>)>,
+        Query<&Transform, (With<Player>, Without<Camera>)>,
+    ),
+    time: Res<Time>,
+) {
+    let mut camera = cam_query.single_mut();
+    let player = player_query.single();
+
+    camera.translation = player.translation;
+}
+
 impl Player {
     pub fn new() -> PlayerBundle {
         PlayerBundle {
