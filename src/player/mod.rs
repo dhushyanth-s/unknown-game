@@ -2,6 +2,10 @@ use bevy::{prelude::*, window::PrimaryWindow};
 
 use crate::MainCamera;
 
+use self::shoot::Bullet;
+
+mod shoot;
+
 #[derive(Bundle)]
 pub struct PlayerBundle {
     sprite: SpriteBundle,
@@ -23,14 +27,17 @@ impl Plugin for PlayerPlugin {
         app.init_resource::<MyWorldCoords>()
             .add_systems(Startup, setup)
             .add_systems(FixedUpdate, (Player::player_move, update_camera))
-            .add_systems(Update, (Player::player_rotate));
+            .add_systems(
+                Update,
+                (update_mouse_world_position, (Player::update_player_rotation, Bullet::update)).chain(),
+            )
+            .add_systems(FixedUpdate, shoot::shoot);
     }
 }
 
 fn setup(mut commands: Commands) {
     commands.spawn(Player::new());
 }
-
 
 fn update_camera(
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -72,16 +79,16 @@ impl Player {
     ) {
         let mut player_transform = query.single_mut();
         let mut direction = Vec2::new(0.0, 0.0);
-        if keyboard_input.pressed(KeyCode::ArrowLeft) {
+        if keyboard_input.pressed(KeyCode::KeyA) {
             direction += Vec2::new(-1.0, 0.0);
         }
-        if keyboard_input.pressed(KeyCode::ArrowRight) {
+        if keyboard_input.pressed(KeyCode::KeyD) {
             direction += Vec2::new(1.0, 0.0);
         }
-        if keyboard_input.pressed(KeyCode::ArrowUp) {
+        if keyboard_input.pressed(KeyCode::KeyW) {
             direction += Vec2::new(0.0, 1.0);
         }
-        if keyboard_input.pressed(KeyCode::ArrowDown) {
+        if keyboard_input.pressed(KeyCode::KeyS) {
             direction += Vec2::new(0.0, -1.0);
         }
         if direction.length() != 0.0 {
@@ -91,34 +98,42 @@ impl Player {
         player_transform.translation += direction.extend(0.0) * 500.0 * time.delta_seconds();
     }
 
-    pub fn player_rotate(
+    pub fn update_player_rotation(
         mut q_player: Query<&mut Transform, With<Player>>,
-        mut mycoords: ResMut<MyWorldCoords>,
-        // query to get the window (so we can read the current cursor position)
-        q_window: Query<&Window, With<PrimaryWindow>>,
-        // query to get camera transform
-        q_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+        mycoords: Res<MyWorldCoords>,
     ) {
-        // get the camera info and transform
-        // assuming there is exactly one main camera entity, so Query::single() is OK
-        let (camera, camera_transform) = q_camera.single();
+        let world_position = mycoords.0;
         let mut player_transform = q_player.single_mut();
 
-        // There is only one primary window, so we can similarly get it from the query:
-        let window = q_window.single();
+        let player_translation = player_transform.translation.truncate();
+        let diff = (world_position - player_translation);
+        let angle = diff.y.atan2(diff.x);
+        player_transform.rotation = Quat::from_axis_angle(Vec3::new(0., 0., 1.), angle);
+    }
+}
 
-        // check if the cursor is inside the window and get its position
-        // then, ask bevy to convert into world coordinates, and truncate to discard Z
-        if let Some(world_position) = window
-            .cursor_position()
-            .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
-            .map(|ray| ray.origin.truncate())
-        {
-            mycoords.0 = world_position;
-            let player_translation = player_transform.translation.truncate();
-            let diff = (world_position - player_translation);
-            let angle = diff.y.atan2(diff.x);
-            player_transform.rotation = Quat::from_axis_angle(Vec3::new(0., 0., 1.), angle);
-        }
+
+pub fn update_mouse_world_position(
+    mut mycoords: ResMut<MyWorldCoords>,
+    // query to get the window (so we can read the current cursor position)
+    q_window: Query<&Window, With<PrimaryWindow>>,
+    // query to get camera transform
+    q_camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+) {
+    // get the camera info and transform
+    // assuming there is exactly one main camera entity, so Query::single() is OK
+    let (camera, camera_transform) = q_camera.single();
+
+    // There is only one primary window, so we can similarly get it from the query:
+    let window = q_window.single();
+
+    // check if the cursor is inside the window and get its position
+    // then, ask bevy to convert into world coordinates, and truncate to discard Z
+    if let Some(world_position) = window
+        .cursor_position()
+        .and_then(|cursor| camera.viewport_to_world(camera_transform, cursor))
+        .map(|ray| ray.origin.truncate())
+    {
+        mycoords.0 = world_position;
     }
 }
