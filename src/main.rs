@@ -1,10 +1,17 @@
 use bevy::prelude::*;
 
 mod player;
-use player::{MyWorldCoords, Player, PlayerPlugin};
+use bevy_rapier2d::prelude::*;
+use mob::MobPlugin;
+use player::PlayerPlugin;
+
+mod mob;
+mod collider;
+
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, PlayerPlugin))
+        .add_plugins((DefaultPlugins, (PlayerPlugin, MobPlugin)))
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         .add_systems(Startup, setup)
         .run();
 }

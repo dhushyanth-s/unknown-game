@@ -1,6 +1,7 @@
 use bevy::{prelude::*, window::PrimaryWindow};
+use bevy_rapier2d::prelude::*;
 
-use crate::MainCamera;
+use crate::{collider::ColliderBundle, MainCamera};
 
 use self::shoot::Bullet;
 
@@ -10,6 +11,7 @@ mod shoot;
 pub struct PlayerBundle {
     sprite: SpriteBundle,
     player: Player,
+    collider_bundle: ColliderBundle,
 }
 
 /// We will add this to each camera we want to compute cursor position for.
@@ -29,7 +31,11 @@ impl Plugin for PlayerPlugin {
             .add_systems(FixedUpdate, (Player::player_move, update_camera))
             .add_systems(
                 Update,
-                (update_mouse_world_position, (Player::update_player_rotation, Bullet::update)).chain(),
+                (
+                    update_mouse_world_position,
+                    (Player::update_player_rotation, Bullet::update),
+                )
+                    .chain(),
             )
             .add_systems(FixedUpdate, shoot::shoot);
     }
@@ -69,6 +75,10 @@ impl Player {
                 ..default()
             },
             player: Player,
+            collider_bundle: ColliderBundle {
+                collider: Collider::cuboid(10.0, 10.0),
+                ..default()
+            },
         }
     }
 
@@ -111,7 +121,6 @@ impl Player {
         player_transform.rotation = Quat::from_axis_angle(Vec3::new(0., 0., 1.), angle);
     }
 }
-
 
 pub fn update_mouse_world_position(
     mut mycoords: ResMut<MyWorldCoords>,
