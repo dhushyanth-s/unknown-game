@@ -76,7 +76,7 @@ impl Player {
             },
             player: Player,
             collider_bundle: ColliderBundle {
-                collider: Collider::cuboid(10.0, 10.0),
+                collider: Collider::cuboid(1.0, 1.0),
                 ..default()
             },
         }

@@ -12,6 +12,7 @@ fn main() {
     App::new()
         .add_plugins((DefaultPlugins, (PlayerPlugin, MobPlugin)))
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
+        .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(Startup, setup)
         .run();
 }

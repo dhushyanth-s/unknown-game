@@ -1,4 +1,4 @@
-use bevy::{ecs::world, prelude::*};
+use bevy::{ecs::world, prelude::*, transform::commands};
 use bevy_rapier2d::pipeline::CollisionEvent;
 
 use crate::player::Player;
@@ -20,15 +20,22 @@ pub fn movement(
     }
 }
 
-pub fn collision_with_player(mut collision_events: EventReader<CollisionEvent>, world: &World) {
+pub fn collision_with_player(
+    mut collision_events: EventReader<CollisionEvent>,
+    player: Query<Entity, With<Player>>,
+    mut commands: Commands,
+) {
     for collision_event in collision_events.read() {
-       match collision_event {
-				CollisionEvent::Started(a, b, _) => {
-					for i in world.inspect_entity(*b) {
-						info!("{}", i.name());
-					}
-				},
-        CollisionEvent::Stopped(_, _, _) => {},
-			 }
+        match collision_event {
+            CollisionEvent::Started(a, b, _) => {
+                if *a == player.single() {
+                    commands.entity(*b).despawn();
+                } else if *b == player.single() {
+                    commands.entity(*a).despawn();
+                }
+            }
+            CollisionEvent::Stopped(_, _, _) => {}
+        }
     }
 }
+ 
